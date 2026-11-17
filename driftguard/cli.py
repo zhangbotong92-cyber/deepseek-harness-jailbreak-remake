@@ -39,6 +39,9 @@ def build_parser():
         if name == "apply":
             p.add_argument("--force", action="store_true", help="即使被改过也覆盖")
 
+    p_drift = sub.add_parser("drift", help="对照基线，看用户改了哪几行")
+    p_drift.add_argument("--file", required=True, dest="target")
+
     p_forget = sub.add_parser("forget", help="不再管理某个文件")
     p_forget.add_argument("--file", required=True, dest="target")
     return ap
@@ -66,6 +69,18 @@ def main(argv=None):
         edited = [r for r in rows if r["state"] == "modified"]
         if edited:
             print("\n有 %d 个文件被手动改过，apply 会跳过它们；要接受现状用 adopt。" % len(edited))
+        return 0
+
+    if args.cmd == "drift":
+        res = guard.drift(args.target)
+        print("状态：%s%s" % (res["state"], ("（%s）" % res["reason"]) if res["reason"] else ""))
+        if not res["lines"]:
+            print("没有差异。")
+            return 0
+        for line in res["lines"]:
+            print(line)
+        if res.get("truncated"):
+            print("...（差异太长，已截断）")
         return 0
 
     if args.cmd == "forget":
