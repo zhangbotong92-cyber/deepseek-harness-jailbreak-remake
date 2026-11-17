@@ -120,6 +120,24 @@ class DriftGuardTest(unittest.TestCase):
         self.assertEqual(g.forgot(self.target), "unregistered")
         self.assertEqual(g.status(self.target), "unregistered")
 
+    # ---------------------------------------------------------------- 漂移解释
+    def test_drift_shows_what_user_changed(self):
+        g = Guard(self.state)
+        g.register(self.target, SEED_V1)
+        self._write("# rules v1\n- be brief\n- 加了中文一条\n")
+        res = g.drift(self.target)
+        self.assertEqual(res["state"], "modified")
+        joined = "\n".join(res["lines"])
+        self.assertIn("+", joined)
+        self.assertIn("加了中文一条", joined)
+
+    def test_drift_without_baseline_says_why(self):
+        g = Guard(self.state)
+        g.register(self.target, SEED_V1, write_if_missing=False)
+        res = g.drift(self.target)
+        self.assertEqual(res["lines"], [])
+        self.assertTrue(res["reason"])
+
     # ---------------------------------------------------------------- 状态文件本身
     def test_corrupt_state_refuses_to_run(self):
         with open(self.state, "w", encoding="utf-8") as fh:
