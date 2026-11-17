@@ -1,10 +1,10 @@
-# driftguard
+# driftguard：dsh-purge（DSH 破甲插件）的 Python 重写
 
-**dsh-purge 的 Python 重写版。**
+一句话：**这是 dsh-purge 的重写，只做它最核心的一件事——提示词层被替换之后，怎么判断该不该再次覆盖。**
 
-dsh-purge 是一个 DSH（DeepSeek Harness）插件，做的是"破甲"：替换或注入提示词层，让不同模型用不同提示词。它用 Node 写，3.5MB，除了这件事还带桌面端解包、红队评测、进程处理。
+dsh-purge 是 DSH（DeepSeek Harness）的破甲插件：替换或注入提示词层，让不同模型用不同提示词。它用 Node 写，3.5MB，除了这件事还带桌面端解包、红队评测、进程处理。
 
-这个仓库只拿其中一件事重做：**提示词层被替换之后，怎么判断该不该再次覆盖。** 零依赖 Python，有测试，能在 CI 里跑。
+本仓库把那套覆盖判断抽出来用 Python 重写，零依赖，带测试，能进 CI。仓库名 `driftguard` 是包名；它的身份是 **dsh-purge 的 Python 重写**。
 
 ## 它解决的具体问题
 
@@ -104,4 +104,4 @@ MIT，见 [LICENSE](LICENSE)。
 
 ---
 
-**English**: A Python re-implementation of the override-state mechanism from `dsh-purge` (a DSH prompt-layer plugin). It decides whether an auto-managed prompt file may be overwritten after the user has edited it, explains the drift, and ships no prompt content of its own. Stdlib only, 13 tests.
+**English**: A Python rewrite of `dsh-purge` (a DSH prompt-layer plugin) — specifically its override-state mechanism (a DSH prompt-layer plugin). It decides whether an auto-managed prompt file may be overwritten after the user has edited it, explains the drift, and ships no prompt content of its own. Stdlib only, 13 tests.
