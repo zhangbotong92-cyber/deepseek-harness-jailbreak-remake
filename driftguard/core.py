@@ -52,6 +52,17 @@ def _now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+SNAPSHOT_LIMIT = 64 * 1024   # 只存到 64KB：够解释改动，不至于把状态文件撑成仓库
+
+
+def _snapshot(text):
+    if text is None:
+        return None
+    if len(text.encode("utf-8")) > SNAPSHOT_LIMIT:
+        return None
+    return text
+
+
 class Guard(object):
     """一份状态文件，管理若干个"种子 + 目标"对。"""
 
@@ -112,6 +123,7 @@ class Guard(object):
             atomic_write(target, seed_text)
             entry["written"] = sha256_text(seed_text)
             entry["writtenAt"] = _now()
+            entry["baseline"] = _snapshot(seed_text)
         self._save()
         return self.status(target)
 
@@ -129,6 +141,7 @@ class Guard(object):
         entry["seed"] = sha256_text(seed_text)
         entry["written"] = sha256_text(seed_text)
         entry["writtenAt"] = _now()
+        entry["baseline"] = _snapshot(seed_text)
         entry["seedUpdatedAt"] = entry.get("seedUpdatedAt") or _now()
         self._save()
         return ("forced" if force and state == "modified" else "written"), state
@@ -141,6 +154,7 @@ class Guard(object):
         entry["seed"] = sha256_text(seed_text)
         entry["written"] = sha256_text(seed_text)
         entry["writtenAt"] = _now()
+        entry["baseline"] = _snapshot(seed_text)
         self._save()
         return self.status(target)
 
@@ -161,6 +175,23 @@ class Guard(object):
         self.state["files"].pop(target, None)
         self._save()
         return "unregistered"
+
+    def drift(self, target, max_lines=40):
+        """对照我们上次写下的内容，列出差异行。只解释，不合并。"""
+        target = os.path.abspath(target)
+        entry = self.state["files"].get(target) or {}
+        baseline = entry.get("baseline")
+        current = self._read(target)
+        if baseline is None:
+            return {"state": self.status(target), "reason": "没有基线快照（文件超过 64KB 或未登记）", "lines": []}
+        if current is None:
+            return {"state": "missing", "reason": "文件不存在", "lines": []}
+        import difflib
+        diff = list(difflib.unified_diff(
+            baseline.splitlines(), current.splitlines(),
+            fromfile="baseline", tofile="current", lineterm="", n=1))
+        return {"state": self.status(target), "reason": "",
+                "lines": diff[:max_lines], "truncated": len(diff) > max_lines}
 
     # ---------------------------------------------------------------- audit
     def report(self):
