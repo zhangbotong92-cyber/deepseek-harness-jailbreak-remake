@@ -54,6 +54,28 @@ EDIT /path/custom.md         seed=9f8e7d6c5b4a
 有 1 个文件被手动改过，apply 会跳过它们；要接受现状用 adopt。
 ```
 
+
+## 比"该不该覆盖"多说一句：改了哪几行
+
+`apply` 被跳过时，光说"用户改过"没用——人会想知道自己改了什么、跟新版差在哪。
+
+写入时把基线内容存进状态（上限 64KB，超过就不存），然后：
+
+```bash
+python -m driftguard.cli --state state.json drift --file rules.md
+```
+
+```
+状态：modified
+--- baseline
++++ current
+@@ -2 +2,2 @@
+ - be brief
++- 我自己加的一条
+```
+
+`drift` 只解释差异，**不改文件、不合并**。看不合并的理由见 `docs/provenance.md` 最后一节。
+
 ## 三条硬规矩
 
 1. **`modified` 一律跳过，不静默覆盖。** 这是整个库存在的理由。
@@ -66,7 +88,7 @@ EDIT /path/custom.md         seed=9f8e7d6c5b4a
 python -m unittest discover -s tests -v
 ```
 
-11 个用例，覆盖：登记投放、安全升级、**手改后拒绝覆盖**、强制覆盖、幂等、回退、采纳现状、文件丢失、取消管理、状态损坏拒绝运行、原子写不留临时文件。
+13 个用例，覆盖：登记投放、安全升级、**手改后拒绝覆盖**、强制覆盖、幂等、回退、采纳现状、漂移解释、无基线时的降级、文件丢失、取消管理、状态损坏拒绝运行、原子写不留临时文件。
 
 零第三方依赖，Python 3.8+。
 
