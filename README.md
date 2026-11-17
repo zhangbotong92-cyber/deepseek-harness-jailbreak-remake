@@ -1,10 +1,10 @@
 # driftguard：dsh-purge（DSH 破甲插件）的 Python 重写
 
-一句话：**这是 dsh-purge 的重写，只做它最核心的一件事——提示词层被替换之后，怎么判断该不该再次覆盖。**
+dsh-purge 是 DSH（DeepSeek Harness）的破甲插件：替换或注入提示词层，让不同模型用不同提示词。Node 写的，3.5MB，除这件事还带桌面端解包、红队评测、进程处理。
 
-dsh-purge 是 DSH（DeepSeek Harness）的破甲插件：替换或注入提示词层，让不同模型用不同提示词。它用 Node 写，3.5MB，除了这件事还带桌面端解包、红队评测、进程处理。
+这里只重做它最核心的一件事：**提示词层被替换之后，怎么判断该不该再次覆盖。** Python、零依赖、带测试，能进 CI。
 
-本仓库把那套覆盖判断抽出来用 Python 重写，零依赖，带测试，能进 CI。仓库名 `driftguard` 是包名；它的身份是 **dsh-purge 的 Python 重写**。
+包名是 `driftguard`，仓库身份是 dsh-purge 的 Python 重写。
 
 ## 它解决的具体问题
 
