@@ -1,69 +1,62 @@
 # driftguard
 
-自动管理的配置文件，怎么知道该不该覆盖？
+**dsh-purge 的 Python 重写版。**
 
-这个问题不解决，会变成一个**没有报错的 bug**：用户升级了工具，改了配置，然后什么也没发生。
+dsh-purge 是一个 DSH（DeepSeek Harness）插件，做的是"破甲"：替换或注入提示词层，让不同模型用不同提示词。它用 Node 写，3.5MB，除了这件事还带桌面端解包、红队评测、进程处理。
 
-我是在一个真实场景里撞上的：某个工具自动往一个文件里写默认规则，用户手改过之后，新版本就再也进不去了——因为工具没法区分"这是用户改的"和"这是我上次写的"。于是它选择不覆盖，而用户以为升级成功了。
+这个仓库只拿其中一件事重做：**提示词层被替换之后，怎么判断该不该再次覆盖。** 零依赖 Python，有测试，能在 CI 里跑。
 
-## 三种状态，两个哈希
+## 它解决的具体问题
 
-driftguard 给每个受管文件记两个哈希：
+插件会往一个文件里写默认提示词。用户手动改过之后，下一次升级该不该覆盖？
 
-| 字段 | 含义 |
-|---|---|
-| `seed` | 我们发布的那份内容 |
-| `written` | 我们上次真正写进文件的哈希 |
+- 覆盖：用户改的东西没了。
+- 不覆盖：升级永远不生效，**而且不报错**。用户以为升了，其实还是旧的那份。
 
-拿当前文件比对，就得到状态：
+dsh-purge 的源码注释里点了这个坑：状态文件必须记住"我们上次写下去的那一份"，否则会把用户手改误判成自己写的，从此永久拒绝更新。
+
+driftguard 把这条判断抽出来，单独做成一个小库：
 
 ```
-current == written   → ours      我们写的，可以安全升级
-current == seed      → pristine  用户没动过，可以安全升级
-其它                  → modified   用户改过，不许覆盖
-文件不存在            → missing    需要（重新）投放
+current == written   → ours      我们写的，可以升级
+current == seed      → pristine  没动过，可以升级
+其它                  → modified  用户改过，不覆盖，并解释差异
+文件不存在            → missing   需要（重新）投放
 ```
 
-只有 `ours` 和 `pristine` 允许被新版本覆盖。`modified` 会被跳过，并在 `status` 里标出来。
+## 现在有什么 / 没有什么
+
+**有**：状态判断、安全覆盖、基线快照、差异解释、原子写、状态损坏拒绝运行、13 个用例。
+
+**没有**：
+
+- 不含任何默认提示词内容。提示词由你提供（`--seed` 指向你的文件），仓库里不附带。
+- 不含红队评测、桌面端解包、进程处理、自动更新。那些是原插件的其余部分，不在这个重写的范围内。
+- 不做三向合并。只回答"能不能覆盖"，以及"差在哪几行"。
 
 ## 用法
 
 ```bash
-# 登记一个文件（不存在就投放种子）
-python -m driftguard.cli --state state.json register --file rules.md --seed seed.md
+# 登记：文件不存在就投放种子
+python -m driftguard.cli --state state.json register --file prompt.md --seed my-prompt.md
 
-# 升级：只在安全时写入
-python -m driftguard.cli --state state.json apply --file rules.md --seed seed-v2.md
+# 升级：只在安全时写入，被手改过就跳过
+python -m driftguard.cli --state state.json apply --file prompt.md --seed my-prompt-v2.md
 
-# 看所有受管文件现在处于什么状态
+# 看状态
 python -m driftguard.cli --state state.json status
 
-# 用户主动要求回退到种子
-python -m driftguard.cli --state state.json revert --file rules.md --seed seed.md
+# 被跳过时，看用户到底改了哪几行
+python -m driftguard.cli --state state.json drift --file prompt.md
 
-# 接受用户当前的改动作为新基线（从此它算"我们的"）
-python -m driftguard.cli --state state.json adopt --file rules.md
+# 用户要求回退到种子
+python -m driftguard.cli --state state.json revert --file prompt.md --seed my-prompt.md
+
+# 接受用户当前版本作为新基线
+python -m driftguard.cli --state state.json adopt --file prompt.md
 ```
 
-`status` 输出：
-
-```
-ok   /path/rules.md          seed=1a2b3c4d5e6f
-EDIT /path/custom.md         seed=9f8e7d6c5b4a
-
-有 1 个文件被手动改过，apply 会跳过它们；要接受现状用 adopt。
-```
-
-
-## 比"该不该覆盖"多说一句：改了哪几行
-
-`apply` 被跳过时，光说"用户改过"没用——人会想知道自己改了什么、跟新版差在哪。
-
-写入时把基线内容存进状态（上限 64KB，超过就不存），然后：
-
-```bash
-python -m driftguard.cli --state state.json drift --file rules.md
-```
+`drift` 的输出（真跑的结果）：
 
 ```
 状态：modified
@@ -74,13 +67,20 @@ python -m driftguard.cli --state state.json drift --file rules.md
 +- 我自己加的一条
 ```
 
-`drift` 只解释差异，**不改文件、不合并**。看不合并的理由见 `docs/provenance.md` 最后一节。
+`status` 的输出：
 
-## 三条硬规矩
+```
+ok   /path/prompt.md         seed=1a2b3c4d5e6f
+EDIT /path/custom.md         seed=9f8e7d6c5b4a
 
-1. **`modified` 一律跳过，不静默覆盖。** 这是整个库存在的理由。
-2. **状态文件损坏就退出，不重置。** 重置等于把所有文件变回"首次投放"，下一次 apply 就会覆盖用户改动。
-3. **写入是原子的。** 先写临时文件再 `os.replace`；`fsync` 之后才替换，半写坏的状态比写错更麻烦。
+有 1 个文件被手动改过，apply 会跳过它们；要接受现状用 adopt。
+```
+
+## 三条规矩
+
+1. `modified` 一律跳过，不静默覆盖。这是它存在的理由。
+2. 状态文件损坏就退出。重置等于把所有文件变回"首次投放"，下一次 apply 就会覆盖用户改动。
+3. 写入是原子的。先写临时文件，`fsync`，再 `os.replace`。
 
 ## 测试
 
@@ -88,22 +88,20 @@ python -m driftguard.cli --state state.json drift --file rules.md
 python -m unittest discover -s tests -v
 ```
 
-13 个用例，覆盖：登记投放、安全升级、**手改后拒绝覆盖**、强制覆盖、幂等、回退、采纳现状、漂移解释、无基线时的降级、文件丢失、取消管理、状态损坏拒绝运行、原子写不留临时文件。
+13 个用例。其中最关键那条：用户手改之后 `apply` 必须返回 `skipped`，且文件内容一个字都不能变。
 
-零第三方依赖，Python 3.8+。
+## 和原插件的关系
 
-## 适用与不适用
+- 原插件：`dsh-purge`，MIT，作者 YuJunZhiXue。本仓库沿用同一套状态思路（`hash` / `seedHash` / `customized`）。
+- 本仓库是**重新实现**，不是 fork，也没有复制其代码；不包含它的默认提示词内容。
+- 多做的部分：基线快照、`drift` 差异解释、`adopt`、`forget`、状态损坏时拒绝运行。
 
-**适用**：插件安装器、提示词/规则注入、脚手架模板、dotfiles 管理——任何"我有一份默认内容，但用户可能改过"的场景。
-
-**不适用**：需要真正三向合并（像 git 那样合并冲突）的场景。driftguard 只判断"能不能覆盖"，不合并内容；多数时候这就够了，做合并会把一件事变成两件事。
-
-## 出处与致谢
-
-这套"seed / written / customized"的状态思路，是从一个 MIT 协议的 DSH 插件里看到问题、然后自己实现的：上游把这三个字段写进 `override-state.json`，正是为了解决"手改之后升级不生效"。
-
-本仓库是独立实现（Python、通用场景），**没有复制上游代码，也不包含任何第三方提示词内容**。详见 [CREDITS.md](CREDITS.md)。
+细节见 [CREDITS.md](CREDITS.md)。
 
 ## 许可
 
 MIT，见 [LICENSE](LICENSE)。
+
+---
+
+**English**: A Python re-implementation of the override-state mechanism from `dsh-purge` (a DSH prompt-layer plugin). It decides whether an auto-managed prompt file may be overwritten after the user has edited it, explains the drift, and ships no prompt content of its own. Stdlib only, 13 tests.
