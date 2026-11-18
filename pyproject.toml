@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "driftguard"
+version = "0.2.0"
+description = "Decide whether an auto-managed config file may be overwritten after the user edited it (seed / written / current), and explain the drift."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "海桥 (Ocean Relay)", email = "1024720334@qq.com" }]
+keywords = ["config", "dotfiles", "provenance", "idempotent", "cli", "stdlib"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Environment :: Console",
+  "Topic :: Software Development :: Version Control",
+  "Topic :: System :: Installation/Setup",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/zhangbotong92-cyber/driftguard"
+Issues = "https://github.com/zhangbotong92-cyber/driftguard/issues"
+
+[project.scripts]
+driftguard = "driftguard.cli:main"
+
+[tool.setuptools]
+packages = ["driftguard"]
