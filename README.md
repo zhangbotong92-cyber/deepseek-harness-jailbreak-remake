@@ -1,5 +1,8 @@
 # driftguard：dsh-purge（DSH 破甲插件）的 Python 重写
 
+![ci](https://github.com/zhangbotong92-cyber/driftguard/actions/workflows/ci.yml/badge.svg)
+![python](https://img.shields.io/badge/python-3.8%2B-blue)
+
 dsh-purge 是 DSH（DeepSeek Harness）的破甲插件：替换或注入提示词层，让不同模型用不同提示词。Node 写的，3.5MB，除这件事还带桌面端解包、红队评测、进程处理。
 
 这里只重做它最核心的一件事：**提示词层被替换之后，怎么判断该不该再次覆盖。** Python、零依赖、带测试，能进 CI。
