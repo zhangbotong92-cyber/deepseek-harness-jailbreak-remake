@@ -1,13 +1,15 @@
-# driftguard：dsh-purge（DSH 破甲插件）的 Python 重写
+# deepseek-harness-jailbreak-remake
 
-![ci](https://github.com/zhangbotong92-cyber/driftguard/actions/workflows/ci.yml/badge.svg)
+**DeepSeek Harness 破甲重制版（Python）。**
+
+![ci](https://github.com/zhangbotong92-cyber/deepseek-harness-jailbreak-remake/actions/workflows/ci.yml/badge.svg)
 ![python](https://img.shields.io/badge/python-3.8%2B-blue)
 
 dsh-purge 是 DSH（DeepSeek Harness）的破甲插件：替换或注入提示词层，让不同模型用不同提示词。Node 写的，3.5MB，除这件事还带桌面端解包、红队评测、进程处理。
 
 这里只重做它最核心的一件事：**提示词层被替换之后，怎么判断该不该再次覆盖。** Python、零依赖、带测试，能进 CI。
 
-包名是 `driftguard`，仓库身份是 dsh-purge 的 Python 重写。
+仓库名是这个项目的身份；Python 包名沿用了 `driftguard`（命令也是它），不影响使用。
 
 ## 它解决的具体问题
 
@@ -93,7 +95,7 @@ python -m unittest discover -s tests -v
 
 13 个用例。其中最关键那条：用户手改之后 `apply` 必须返回 `skipped`，且文件内容一个字都不能变。
 
-## 和原插件的关系
+## 和原插件（dsh-purge）的关系
 
 - 原插件：`dsh-purge`，MIT，作者 YuJunZhiXue。本仓库沿用同一套状态思路（`hash` / `seedHash` / `customized`）。
 - 本仓库是**重新实现**，不是 fork，也没有复制其代码；不包含它的默认提示词内容。
