@@ -22,8 +22,8 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/zhangbotong92-cyber/driftguard"
-Issues = "https://github.com/zhangbotong92-cyber/driftguard/issues"
+Homepage = "https://github.com/zhangbotong92-cyber/deepseek-harness-jailbreak-remake"
+Issues = "https://github.com/zhangbotong92-cyber/deepseek-harness-jailbreak-remake/issues"
 
 [project.scripts]
 driftguard = "driftguard.cli:main"
